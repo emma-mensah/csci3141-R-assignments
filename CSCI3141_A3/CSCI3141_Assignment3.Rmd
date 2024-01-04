@@ -1,0 +1,281 @@
+---
+title: "Assignment 3"
+output: html_notebook
+---
+
+
+## Introduction
+### Data description and Problem  Definition
+* The Adult Data set obtained from https://archive.ics.uci.edu/ml/datasets/Adult is being used to build a  predictive model that determines if a person's income is less than $50K/year or more than $50K/year based  on certain variables from a census data.
+
+### Brief Data Understanding
+Loading adult data set and libraries
+```{r}
+AdultData <- read.csv("adult.data",fileEncoding="UTF-8-BOM", na.strings = '..')
+library(dplyr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(tidyverse)
+```
+##### Structure of dataset
+The adult data set comprises 32560 observations and 15 variables. The  column names don't make sense thus,  we have to reassign them.
+```{r}
+str(AdultData)
+```
+##### Assigning column  names  to each variable
+```{r}
+AdultDataNames <- read_lines("adult.names")
+AdultDataNames <- AdultDataNames[97:110]
+
+AdultDataNames <- str_trim(AdultDataNames)
+onlyName <- str_split_fixed(AdultDataNames,":",2)[,1]
+onlyName <- str_split_fixed(onlyName," ",2)[,1]
+
+positions <- c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)
+
+for(i in 1:ncol(AdultData)){
+    colnames(AdultData)[i] <- paste(onlyName[positions[i]])
+} 
+names(AdultData)[15] <-"income"
+```
+##### Type conversion
+Based on the structure of the data set, I converted columns workclass,education,marital-status,occupation,relationship,race,sex,native-country and income that have type of 'chr' to type 'factor' for better handling.
+```{r}
+AdultData$workclass <- as.factor(AdultData$workclass)
+AdultData$education <- as.factor(AdultData$education)
+AdultData$`marital-status` <- as.factor(AdultData$`marital-status`)
+AdultData$occupation <- as.factor(AdultData$occupation)
+AdultData$relationship <- as.factor(AdultData$relationship)
+AdultData$race <- as.factor(AdultData$race)
+AdultData$sex <- as.factor(AdultData$sex)
+AdultData$`native-country` <- as.factor(AdultData$`native-country`)
+AdultData$income <- as.factor(AdultData$income)
+```
+##### Summary of Data set
+```{r}
+summary(AdultData)
+```
+##### Visualization data set to get a better understanding of each variable
+Ages range from about 13 to 85 years old. We can see that there's a high number of individuals who range between the ages of 21 to 37 and 37 to 52.
+```{r}
+ggplot(data=AdultData, aes(x=age)) +
+    geom_histogram( binwidth=15, fill="#9999ff", color="#e9ecef", alpha=0.9) +
+    ggtitle("Distribution of age")
+```
+There's a huge number of individuals who work in the private sector, followed by self-emp-not-inc.
+```{r}
+ggplot(data=AdultData, aes(x=workclass)) +
+    coord_flip() +
+    geom_bar(  fill="#9999ff", color="#e9ecef", alpha=0.9) +
+    ggtitle("Distribution of workclass")
+```
+There seems to be missing data for the Armed Forces  category. Overall, the data seems to be distributed uniformly.
+```{r}
+ggplot(data=AdultData, aes(x=occupation)) +
+    coord_flip() +
+    geom_bar(  fill="#9999ff", color="#e9ecef", alpha=0.9) +
+    ggtitle("Distribution of occupation")
+```
+The distribution shows that there are majority of individuals who graduated HS, followed by individuals who went to 'some-college' and individuals who hold a bachelors degree.
+```{r}
+ggplot(data=AdultData, aes(x=education)) +
+    coord_flip() +
+    geom_bar(  fill="#9999ff", color="#e9ecef", alpha=0.9) +
+    ggtitle("Distribution of education")
+```
+There is missing data for the Armed Force married spouse category. A lot if individuals have the marital-status of married-civ-spouse which means married to a civilian spouse.
+```{r}
+ggplot(data=AdultData, aes(x=`marital-status`)) +
+    coord_flip() +
+    geom_bar(  fill="#9999ff", color="#e9ecef", alpha=0.9) +
+    ggtitle("Distribution of marital-status")
+```
+Since this is a US data set, it explains why there is a vast majority in the number of white people. 
+```{r}
+ggplot(data=AdultData, aes(x=race)) +
+    coord_flip() +
+    geom_bar(  fill="#9999ff", color="#e9ecef", alpha=0.9) +
+    ggtitle("Distribution of race")
+```
+As expected, there is a large number of males in this dataset which might be a little biased.
+```{r}
+ggplot(data=AdultData, aes(x=sex)) +
+    geom_bar(  fill="#9999ff", color="#e9ecef", alpha=0.9) +
+    ggtitle("Distribution of sex")
+```
+There seems to be a  large number of individuals who work exactly 40 hours per week. Only a few work about 80 hours per week.
+```{r}
+ggplot(data=AdultData, aes(x=`hours-per-week`)) +
+    geom_histogram( binwidth=20, fill="#9999ff", color="#e9ecef", alpha=0.9) +
+    ggtitle("Distribution of hours-per-week")
+```
+
+##  Experimental Setup
+* **Dependent  variable**: Income
+* **Independent  variable(s)**: Age, Work-class, Education, Occupation,Race, Sex, Hours per week
+* **Hypothesis**:The more hours worked  per week, the higher the income(income >$50K/yr).
+* **Design of experiment**:
+    * Formulate  predictive task which was stated above.
+    * Select the right performance metrics and estimation methods.
+    * Build a model(s) to predict if a person's income is >$50K/yr or                <$50K/yr(classification problem).
+    
+#### Data  Preparation
+Based on the predictive task, I removed variables fnlwgt,  education-num, native-country, capital-gain, capital-loss, relationship since most of the values are zero and not evenly distributed.
+```{r}
+AdultData$fnlwgt<- NULL
+AdultData$`education-num`<- NULL
+AdultData$`native-country`<- NULL
+AdultData$`capital-gain`<- NULL
+AdultData$`capital-loss`<- NULL
+AdultData$relationship<- NULL
+```
+
+There are some incomplete cases in the remaining variables, so we need to find them and remove them.
+```{r}
+AdultData <- AdultData[complete.cases(AdultData),]
+```
+   
+##### Data Splitting and model building
+Data is randomly split into a training set and testing set. I used 80% for the training set and 20%  for the test  set
+```{r}
+set.seed(123)
+df = sort(sample(nrow(AdultData), nrow(AdultData)*.8))
+train<-AdultData[df,]
+test<-AdultData[-df,]
+```
+To help choose an appropriate metric, I will use a generalized linear model
+```{r}
+model <- glm(income~ ., data = train, family = binomial)
+```
+Creating confusion matrix for calculations
+```{r}
+prediction <- rep('<=50K', length(predict(model, test, type = 'response')))
+prediction[predict(model, test, type = 'response')>=.5] <- '>50K'
+
+(mtrx <- table(prediction, test$income))
+```
+* **Accuracy** is the sum of TP(True Positives) and TN(True Negatives) divided by the total(TP+TN+FP+FN). With a total of 6,512 ,877 TP and 4539 TN, the accuracy of the model will be 83.1%,  thus the model can bee said to be accurate.
+  + Although accuracy was calculated it is not useful in this case because we have an in balanced data set, thus we will rely on recall and precision.
+```{r}
+(accuracy_glm  = (877+4539)/(4539+711+385+877))
+```
+  
+* **Precision** equals TP/ (TP + FP). In this case, we have 877 TP and 711 FP. Doing the maths, we get a precision of 55.22% (877/(877+711)). This means about 55% of people were correctly classified to earn more than 50K/year.
+  + Based on the confusion matrix, I noticed that the FP was greater than the FN, thus using precision will help better understand which cases were true positives.
+```{r}
+(precision_glm = (877/(877+711)))
+```
+  
+* **Recall** equals TP/(TP+FN). in this case, we have 877 TP and 385 FN. The rate equals approximately 69.49% (877/(877+385)). This means about 69 individuals were correctly classified to earn more than 50K/year.
+  +  Recall was further calculated even though not necessarily needed to better understand the model performance.
+```{r}
+(recall_glm = (877/(877+385)))
+```
+
+##### Testing algorithms
+Using a **KNN model** to predict income.
+Starting off with k = 5 and converting factor types to numeric.
+```{r}
+train_2 <- AdultData[1:26048, 1:8]
+test_2 <- AdultData[26049:32560, 1:8]
+
+train_2$workclass <- as.numeric(train_2$workclass)
+train_2$education <- as.numeric(train_2$education)
+train_2$`marital-status` <- as.numeric(train_2$`marital-status`)
+train_2$occupation <- as.numeric(train_2$occupation)
+train_2$race <- as.numeric(train_2$race)
+train_2$sex <- as.numeric(train_2$sex)
+
+test_2$workclass <- as.numeric(test_2$workclass)
+test_2$education <- as.numeric(test_2$education)
+test_2$`marital-status` <- as.numeric(test_2$`marital-status`)
+test_2$occupation <- as.numeric(test_2$occupation)
+test_2$race <- as.numeric(test_2$race)
+test_2$sex <- as.numeric(test_2$sex)
+
+
+train_outcome<-AdultData[1:26048, 9]
+test_outcome<-AdultData[1:26048, 9]
+
+
+train_outcome <- as.numeric(train_outcome)
+test_outcome <- as.numeric(test_outcome)
+
+
+model2_knn <- knn(train = train_2, cl= train_outcome, k = 5, test = test_2)
+
+model2_knn
+```
+
+```{r}
+#table(test_outcome,model2_knn)
+```
+
+Using a **decision tree**
+```{r}
+library(rpart)
+library(rpart.plot)
+
+model4_dt <- rpart(income~., data = train)
+test$predicted <- predict(model4_dt,test, type = 'class')
+```
+Creating a confusion matrix for DT
+```{r}
+table(test$income,test$predicted)
+```
+* **Accuracy**
+```{r}
+(accuracy_dt = (968+4393)/(4393+531+620+968))
+```
+
+* **Precision**:
+```{r}
+(precision_dt = (968/(968+531)))
+```
+
+* **Recall**:
+```{r}
+(recall_dt = (968/(968+620)))
+```
+
+## Results
+* **GLM analysis**
+```{r}
+model
+```
+This model doesn't perform well because of multiple variables used that make it hard for the model to give a good prediction.
+
+* **Decision tree plot**
+```{r}
+rpart.plot(model4_dt, type = 5, box.palette = "BuBn")
+```
+We about 14% of individuals who have a marital status of Married-AF-spouse(Armed forces spouse) and Married-civ-spouse(civilian spouse) earned more than 50K/yr.
+
+The results from the decision tree  was better compared to the glm model as it had a higher precision. That is, the model was able to correctly classify individuals who had a true income above $50K/yr.
+
+* **KNN**
+
+### Model comparison
+#### Model &nbsp;&nbsp;&nbsp;&nbsp; Accuracy &nbsp;&nbsp;&nbsp;&nbsp; Precision &nbsp;&nbsp;&nbsp;&nbsp; Recall
+###### GLM &nbsp;&nbsp;&nbsp;&nbsp; 0.8316953 &nbsp;&nbsp;&nbsp;&nbsp; 0.552267 &nbsp;&nbsp;&nbsp;&nbsp; 0.6949287
+###### Decision Tree &nbsp;&nbsp;&nbsp;&nbsp; 0.8232494 &nbsp;&nbsp;&nbsp;&nbsp; 0.6457638&nbsp;&nbsp;&nbsp;&nbsp; 0.6095718
+###### KNN
+
+
+## Conclusion
+After analyzing the data set, I noticed that most of the ages that earned above 50K  per year were within the groups  of about 40-50. Individuals of a lesser age or even older than that interval earned less than 50k/yeaar.
+
+Another interesting observation was that individuals who worked in the private sector turned out to receive an income greater than 50K/year.However, there's a greater number of individuals in the same category who earn less than 50K/yr.
+
+In terms of hours-per-week, I noticed that individuals who worked exactly 40 hours per week earned less than 50K/yr whilst their counterparts who worked more than 40 hours-per-week earned more than 50K/yr
+
+Last observation was the sex of the individual. I noticed that a great number of men tend to receive a salary less than 50K/yr compared to women. Similarly, a greater number  of males receive a salary greater than 50K/yr compared to females.
+
+Overall, the models had a accuracy with the range of 82-83%. However,the best model was the decision tree. This model had a low error rate of 17.68 and a good precision of about 64%.
+
+## References:
+1. Neo, B. (2020, October 27). Experimental Design in data science. Medium. Retrieved December 2, 2022, from https://towardsdatascience.com/designing-experiments-in-data-science-23360d2ddf84 
+
+2. Treadway, A. (2020, February 16). Evaluate your R model with mlmetrics. Open Source Automation. Retrieved December 5, 2022, from http://theautomatic.net/2020/01/29/evaluate-your-r-model-with-mlmetrics/ 
+

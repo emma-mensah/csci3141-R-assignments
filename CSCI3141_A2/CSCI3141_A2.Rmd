@@ -1,0 +1,289 @@
+---
+title: "Assignment 2"
+output: html_notebook
+---
+# Introduction
+* Installing and loading necessary packages to be used in this EDA
+
+```{r}
+install.packages("stats")
+install.packages("dplyr")
+install.packages("ggplot2")
+```
+```{r}
+library(stats)
+library(dplyr)
+library(readr)
+library(stringr)
+library(ggplot2)
+```
+* Loading the adult data set
+```{r}
+AdultData <- read.csv("adult.data",fileEncoding="UTF-8-BOM", na.strings = '..')
+```
+
+### Data set description
+* The data set being analysed is the **Adult data set** which can be found at  https://archive.ics.uci.edu/ml/datasets/Adult
+```{r}
+dim(AdultData)
+```
+* The adult data set comprises 32560 observations and 15 variables. However, 1 variable(NA) is a predicted variable (person makes over 50K a year).
+```{r}
+str(AdultData)
+```
+* Data is mainly integer and character values. However, character values seem categorical thus need to convert them to type 'factor'.
+* Raw data did not have meaningful column names
+* Column names have to be linked with data from file *adult.names*
+```{r}
+AdultDataNames <- read_lines("adult.names")
+AdultDataNames <- AdultDataNames[97:110]
+
+
+AdultDataNames <- str_trim(AdultDataNames)
+onlyName <- str_split_fixed(AdultDataNames,":",2)[,1]
+onlyName <- str_split_fixed(onlyName," ",2)[,1]
+
+positions <- c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)
+
+for(i in 1:ncol(AdultData)){
+    colnames(AdultData)[i] <- paste(onlyName[positions[i]])
+} 
+names(AdultData)[15] <-"Predicted"
+```
+* Variables names are age, workclass, fnlwgt, education, education-num, marital-status, occupation, relationship, race, sex, capitall-gain, capital-loss, hours-per-week, native-country.
+```{r}
+names(AdultData)
+```
+* Variable 'fnlwgt' doesn't really contribute to our analysis as it a  wide range of values.
+* Data seems to  have missing values represented with a '?'
+```{r}
+View(AdultData)
+```
+
+```{r}
+AdultData[AdultData == '?'] <- 'NA'
+```
+* Columns with missing data include workclass, occupation and native-country
+```{r}
+summary(AdultData)
+```
+* For numerical variables, the mean is greater than the median which means the distribution is positively skewed.
+* Also notice that there is a large  difference between the 3rd quartile and Max value for fnlwgt, capital-gain and capital-loss.
+* There are 9 unique values for workclass variable, 16 unique values for education variable, 7 unique values for marital-status variable, 15 unique values for occupation variable, 6 unique values for relationship variable, 5 unique values for race variable, 42 unique values for native-country variable.
+```{r}
+length(unique(AdultData$workclass))
+length(unique(AdultData$education))
+length(unique(AdultData$`marital-status`))
+length(unique(AdultData$occupation))
+length(unique(AdultData$relationship))
+length(unique(AdultData$race))
+length(unique(AdultData$`native-country`))
+```
+
+
+### Data set questions
+* Do the data types of each variable seem reasonable? If not, do they need to be changed?
+  +Variables to help answer this question : workclass, sex, occupation, native-country
+
+* Do males in general make more money (>50K a year) than females ?
+  +Variables to help answer this question: Predicted, sex
+
+# Results
+
+### Univariate analysis
+1. **education-num**
+```{r}
+summary(AdultData$`education-num`)
+boxplot(AdultData$`education-num`)
+```
+
+```{r}
+sd(AdultData$`education-num`)
+var(AdultData$`education-num`)
+hist(AdultData$`education-num`, main = "Histogram of education-num")
+```
+
+2. **capital-gain**
+  + Based off the box plot for this variable we notice that there are a lot of outliers in the data  collected
+```{r}
+summary(AdultData$`capital-gain`)
+boxplot(AdultData$`capital-gain`)
+```
+
+```{r}
+sd(AdultData$`capital-gain`)
+var(AdultData$`capital-gain`)
+hist(AdultData$`capital-gain`, main = "Histogram of capital-gain")
+```
+
+3. **capital-loss**
+  + Based off the box plot for this variable we notice that there are a lot of outliers in the data  collected
+```{r}
+summary(AdultData$`capital-loss`)
+boxplot(AdultData$`capital-loss`)
+```
+
+```{r}
+sd(AdultData$`capital-loss`)
+var(AdultData$`capital-loss`)
+hist(AdultData$`capital-loss`, main = "Histogram of capital-loss")
+```
+
+4. **hours-per-week**
+```{r}
+summary(AdultData$`hours-per-week`)
+boxplot(AdultData$`hours-per-week`)
+```
+
+```{r}
+sd(AdultData$`hours-per-week`)
+var(AdultData$`hours-per-week`)
+hist(AdultData$`hours-per-week`, main = "Histogram of hours-per-week")
+```
+
+5. **age**
+```{r}
+summary(AdultData$age)
+boxplot(AdultData$age)
+```
+  
+```{r}
+sd(AdultData$age)
+var(AdultData$age)
+hist(AdultData$age, main = "Histogram of age")
+```
+  
+6. **workclass**
+  + This variable is of type character, however we need to convert it to type factor to categorize it for better visualization.
+  + It also contains missing values represented  by '?'
+```{r}
+AdultData$workclass <- factor(AdultData$workclass)
+
+summary(AdultData$workclass)
+
+plot(AdultData$workclass)
+
+```
+  
+7. **education**
+  + This variable is of type character, however we need to convert it to type factor to categorize it for better visualization.
+```{r}
+AdultData$education <- factor(AdultData$education)
+
+summary(AdultData$education)
+
+plot(AdultData$education)
+```
+  
+8. **marital status**
+  + This variable is of type character, however we need to convert it to type factor to categorise it for better visualization.
+```{r}
+AdultData$`marital-status` <- factor(AdultData$`marital-status`)
+
+summary(AdultData$`marital-status`)
+
+plot(AdultData$`marital-status`)
+```
+  
+9. **occupation**
+  + This variable is of type character, however we need to convert it to type factor to categorise it for better visualization.
+  + It also contains missing values represented  by '?'
+```{r}
+AdultData$occupation <-factor(AdultData$occupation)
+
+summary(AdultData$occupation)
+
+plot(AdultData$occupation)
+```
+  
+10. **relationship**
+  + This variable is of type character, however we need to convert it to type factor to categorise it for better visualization.
+```{r}
+AdultData$relationship <- factor(AdultData$relationship)
+
+summary(AdultData$relationship)
+
+plot(AdultData$relationship)
+```
+  
+11. **race**
+  + This variable is of type character, however we need to convert it to type factor to categorise it for better visualization.
+```{r}
+AdultData$race <- factor(AdultData$race)
+
+summary(AdultData$race)
+
+plot(AdultData$race)
+```
+  
+12. **sex**
+  + This variable is of type character, however we need to convert it to type factor to categorise it for better visualization.
+```{r}
+AdultData$sex <- factor(AdultData$sex)
+
+summary(AdultData$sex)
+
+plot(AdultData$sex)
+```
+  
+13. **native-country**
+  + This variable is of type character, however we need to convert it to type factor to categorise it for better visualization.
+  + It also contains missing values represented  by '?'
+```{r}
+AdultData$`native-country` <- factor(AdultData$`native-country`)
+
+summary(AdultData$`native-country`)
+
+plot(AdultData$`native-country`)
+```
+  
+14. **Predicted**
+  + This variable is of type character, however we need to convert it to type factor to categorise it for better visualization.
+```{r}
+AdultData$Predicted <- factor(AdultData$Predicted)
+
+summary(AdultData$Predicted)
+
+plot(AdultData$Predicted)
+```
+  
+### Bivariate analysis
+1. **comparing age across workclass**
+```{r}
+by(AdultData$age, AdultData$workclass, mean)
+
+ggplot(AdultData, 
+       aes(x = workclass, 
+           y = age)) +
+  geom_boxplot() +
+  labs(title = "Age distribution by workclass")
+```
+
+2. **comparing predicted(makes more than  50K a year) across sex**
+```{r}
+ggplot(AdultData, 
+       aes(x = sex, 
+           fill = Predicted)) + 
+  geom_bar(position = "dodge")
+```
+
+### Finding  Outliers
+```{r}
+boxplot.stats(AdultData$age)$out
+boxplot.stats(AdultData$`hours-per-week`)$out
+```
+
+# Conclusion
+* After analyzing the adult data set, I was able to find answers to my questions. Most of the variables were  of type 'character' which were not the right data type to use to analyse and visualize the data, thus those variables had to  be converted  to type 'factor' to be able to categorise them for better analysis.
+* To answer the second question, I visualized the data set by comparing the variables 'sex' and 'predicted' to visualize if indeed males make more money than females. Based in this data set, we can conclude that indeed, males make >50K a year compared to females.
+*My initial questions did not lead to further questions however, after noticing there were outliers in the data set it made me  questions if these outliers are errors or if they are  real observations  and if the latter, should they be removed?
+* I found it surprising that some individuals who work about 80 hours per week make less than 50K a year compared to an individual who works about 40 hours a week and makes more than 50K  a year.
+
+
+## References
+* Data visualization with R - github pages. (n.d.). Retrieved November 9, 2022, from https://rkabacoff.github.io/datavis/Bivariate.html 
+  + Used in bivariate analysis
+* What is exploratory data analysis? - towards data science. (n.d.). Retrieved November 10, 2022, from https://towardsdatascience.com/exploratory-data-analysis-8fc1cb20fd15
+  + Used  in data set description 
+* Outliers detection in R. Stats and R. (n.d.). Retrieved November 10, 2022, from https://statsandr.com/blog/outliers-detection-in-r/ 
+  + Used in finding outliers
